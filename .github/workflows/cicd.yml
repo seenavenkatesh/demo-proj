@@ -25,9 +25,9 @@ jobs:
 
   security-check:
     runs-on: ubuntu-latest
-      steps:
-      - name : checkout the repo
-        uses: actions/checkout@v4
+   steps:
+     - name : checkout the repo
+       uses: actions/checkout@v4
 
      - name: trivy installtion
        run: |
