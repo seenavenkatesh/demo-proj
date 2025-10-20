@@ -1,13 +1,17 @@
 FROM eclipse-temurin:17-jdk-alpine
-    
-EXPOSE 8080
 
-RUN ls 
-
+# Set app directory
 ENV APP_HOME /usr/src/app
-
-COPY app/*.jar $APP_HOME/app.jar
-
 WORKDIR $APP_HOME
 
+# Copy JAR
+COPY app/*.jar app.jar
+
+# Expose port
+EXPOSE 8080
+
+# Add bash and timezone (optional but helps with MySQL SSL/timezone issues)
+RUN apk add --no-cache bash tzdata
+
+# Run the app
 CMD ["java", "-jar", "app.jar"]
