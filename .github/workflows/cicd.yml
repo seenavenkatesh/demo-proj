@@ -25,7 +25,7 @@ jobs:
 
   security-check:
     runs-on: ubuntu-latest
-   steps:
+    steps:
      - name : checkout the repo
        uses: actions/checkout@v4
 
@@ -37,11 +37,11 @@ jobs:
          sudo apt-get update -y
          sudo apt-get install trivy -y
 
-      - name: trivy  fs
-        run: trivy fs --format table -o fs-report.json .
+     - name: trivy  fs
+       run: trivy fs --format table -o fs-report.json .
 
-      - name: git leaks install
-        run: sudo apt update & sudo apt install gitleaks -y
+     - name: git leaks install
+       run: sudo apt update & sudo apt install gitleaks -y
 
 
    
