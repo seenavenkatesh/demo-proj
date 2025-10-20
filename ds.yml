@@ -1,5 +1,19 @@
 ---
+# ================================
+# MySQL Secret (password)
+# ================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bankapp-db-secret
+type: Opaque
+data:
+  mysql-root-password: VGVzdEAxMjM=  # base64 encoded "Test@123"
+
+---
+# ================================
 # MySQL Deployment
+# ================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,18 +30,49 @@ spec:
         app: mysql
     spec:
       containers:
-      - image: mysql:8
-        name: mysql
+      - name: mysql
+        image: mysql:8
         env:
         - name: MYSQL_ROOT_PASSWORD
-          value: "Test@123"
+          valueFrom:
+            secretKeyRef:
+              name: bankapp-db-secret
+              key: mysql-root-password
         - name: MYSQL_DATABASE
-          value: "bankappdb"
+          value: bankappdb
         ports:
         - containerPort: 3306
           name: mysql
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
 ---
+# ================================
 # MySQL Service
+# ================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -38,8 +83,12 @@ spec:
     targetPort: 3306
   selector:
     app: mysql
+  type: ClusterIP
+
 ---
+# ================================
 # BankApp Deployment
+# ================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -54,21 +103,20 @@ spec:
       labels:
         app: bankapp
     spec:
-      # Init container waits for MySQL to be ready
       initContainers:
       - name: wait-for-mysql
         image: busybox
         command:
-          - sh
-          - -c
-          - |
-            until nc -z mysql-service 3306; do
-              echo "Waiting for MySQL..."
-              sleep 2
-            done
+        - sh
+        - -c
+        - |
+          until nc -z mysql-service 3306; do
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
       containers:
       - name: bankapp
-        image: adijaiswal/bankapp:latest
+        image: <YOUR_ACR_LOGIN_SERVER>/bankapp:latest
         ports:
         - containerPort: 8080
         env:
@@ -77,12 +125,36 @@ spec:
         - name: SPRING_DATASOURCE_USERNAME
           value: root
         - name: SPRING_DATASOURCE_PASSWORD
-          value: Test@123
+          valueFrom:
+            secretKeyRef:
+              name: bankapp-db-secret
+              key: mysql-root-password
         - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
           value: com.mysql.cj.jdbc.Driver
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
 
 ---
+# ================================
 # BankApp Service
+# ================================
 apiVersion: v1
 kind: Service
 metadata:
