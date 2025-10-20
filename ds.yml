@@ -1,5 +1,4 @@
----
-# MySQL Deployment
+# MySQL Deployment & Service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,9 +26,6 @@ spec:
         - containerPort: 3306
           name: mysql
 ---
-
-
-# MySQL Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -40,7 +36,7 @@ spec:
   selector:
     app: mysql
 ---
-# Java Application Deployment
+# BankApp Deployment & Service
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -68,7 +64,6 @@ spec:
         - name: SPRING_DATASOURCE_PASSWORD
           value: Test@123
 ---
-# Bank Application Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -79,5 +74,4 @@ spec:
   - port: 80
     targetPort: 8080
   selector:
-    app: bankapp 
-    
+    app: bankapp
