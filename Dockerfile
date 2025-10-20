@@ -1,14 +1,15 @@
+# Use lightweight Java 17 runtime
 FROM eclipse-temurin:17-jdk-alpine
 
-# Set app directory
-ENV APP_HOME=/usr/src/app
-WORKDIR $APP_HOME
+# Set working directory
+WORKDIR /app
 
-# Copy the JAR file
-COPY app/*.jar app.jar
+# Copy Maven-built jar from target folder
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} app.jar
 
-# Expose port
+# Expose the application port
 EXPOSE 8080
 
-# Run the application
-CMD ["java", "-jar", "app.jar"]
+# Run the Spring Boot app
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
