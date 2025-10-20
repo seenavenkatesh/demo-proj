@@ -1,4 +1,5 @@
-# MySQL Deployment & Service
+---
+# MySQL Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,6 +27,7 @@ spec:
         - containerPort: 3306
           name: mysql
 ---
+# MySQL Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -33,10 +35,11 @@ metadata:
 spec:
   ports:
   - port: 3306
+    targetPort: 3306
   selector:
     app: mysql
 ---
-# BankApp Deployment & Service
+# BankApp Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -51,6 +54,18 @@ spec:
       labels:
         app: bankapp
     spec:
+      # Init container waits for MySQL to be ready
+      initContainers:
+      - name: wait-for-mysql
+        image: busybox
+        command:
+          - sh
+          - -c
+          - |
+            until nc -z mysql-service 3306; do
+              echo "Waiting for MySQL..."
+              sleep 2
+            done
       containers:
       - name: bankapp
         image: adijaiswal/bankapp:latest
@@ -63,7 +78,10 @@ spec:
           value: root
         - name: SPRING_DATASOURCE_PASSWORD
           value: Test@123
+        - name: SPRING_DATASOURCE_DRIVER-CLASS-NAME
+          value: com.mysql.cj.jdbc.Driver
 ---
+# BankApp Service
 apiVersion: v1
 kind: Service
 metadata:
