@@ -116,7 +116,7 @@ spec:
           done
       containers:
       - name: bankapp
-        image: <YOUR_ACR_LOGIN_SERVER>/bankapp:latest
+        image: bankapp12.azurecr.io/bankapp:latest
         ports:
         - containerPort: 8080
         env:
