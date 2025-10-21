@@ -1,136 +1,139 @@
-name: CICD Pipeline 
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [ "main" ]
+
 permissions:
   id-token: write
   contents: read
-  
+
+env:
+  IMAGE_NAME: bankapp
+  IMAGE_TAG: ${{ github.sha }}
+  LATEST_TAG: latest
+
 jobs:
   compile:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Build with Maven
-      run: mvn compile
-      
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build with Maven
+        run: mvn compile
+
   security-check:
     runs-on: ubuntu-latest
     needs: compile
-
     steps:
-    - uses: actions/checkout@v4
-    - name: Trivy Installation
-      run: |
-        sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-        wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-        echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-        sudo apt-get update -y
-        sudo apt-get install -y trivy
+      - uses: actions/checkout@v4
 
-    - name: Trivy FS Scan
-      run: trivy fs --format table -o fs-report.json .
+      - name: Install Trivy
+        run: |
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+          echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/trivy.list
+          sudo apt-get update -y && sudo apt-get install -y trivy
 
-    - name: Gitleaks Installation
-      run: sudo apt install gitleaks -y
-    - name: Gitleaks Code Scan
-      run: gitleaks detect source . -r gitleaks-report.json -f json
+      - name: Trivy File System Scan
+        run: trivy fs --format json -o fs-report.json .
+
+      - name: Install Gitleaks
+        run: sudo apt-get install gitleaks -y
+
+      - name: Run Gitleaks Scan
+        run: gitleaks detect --source . --report-format json --report-path gitleaks-report.json
 
   test:
     runs-on: ubuntu-latest
     needs: security-check
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Unit Test Cases
-      run: mvn test
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Run Unit Tests
+        run: mvn test
 
   build_project_and_sonar_scan:
     runs-on: ubuntu-latest
     needs: test
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: maven
-    - name: Build Project
-      run: mvn package
-    - name: Upload JAR artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-jar
-        path: target/*.jar 
+      - uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+      - name: Build JAR
+        run: mvn package -DskipTests
+      - name: Upload JAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/*.jar
 
-  buils_docker_image_and_push:
+  build_docker_image_and_push:
     runs-on: ubuntu-latest
     needs: build_project_and_sonar_scan
     steps:
-    - uses: actions/checkout@v4
-    - name: Download JAR artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: app-jar
-        path: app  # this will download JAR to ./app folder
-        
-    - name: Azure Login
-      uses: azure/login@v1
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - uses: actions/checkout@v4
 
-    # OIDC ACR Login (no client secret)
-    - name: Azure ACR Login (OIDC)
-      run: az acr login --name ${{ vars.ACR_NAME }}
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app-jar
+          path: app
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      - name: Azure Login with OIDC
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: ACR Login (OIDC)
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ vars.ACR_LOGIN_SERVER }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Build and Push Docker image
-      uses: docker/build-push-action@v6
-      with:
-        context: .
-        push: true
-        tags: |
-          ${{ vars.ACR_LOGIN_SERVER }}/bankapp:latest
-          ${{ vars.ACR_LOGIN_SERVER }}/bankapp:${{ github.sha }}
-        file: ./Dockerfile
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ vars.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ vars.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.LATEST_TAG }}
+          file: ./Dockerfile
 
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: latest
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: latest
 
-    - name: Get AKS credentials
-      run: |
-        az aks get-credentials \
-          --resource-group ${{ vars.AKS_RESOURCE_GROUP }} \
-          --name ${{ vars.AKS_CLUSTER_NAME }} \
-          --overwrite-existing
+      - name: Get AKS Credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ vars.AKS_RESOURCE_GROUP }} \
+            --name ${{ vars.AKS_CLUSTER_NAME }} \
+            --overwrite-existing
 
-    - name: Deploy to AKS
-      run: |
-        kubectl set image deployment/bankapp \
-          bankapp=${{ vars.ACR_LOGIN_SERVER }}/bankapp:${{ github.sha }} --record
-
-    - name: Deploy to AKS
-      run: kubectl apply -f ds.yml
+      - name: Deploy Updated Image to AKS
+        run: |
+          kubectl set image deployment/${{ env.IMAGE_NAME }} \
+            ${{ env.IMAGE_NAME }}=${{ vars.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            --record
+          kubectl rollout status deployment/${{ env.IMAGE_NAME }}
