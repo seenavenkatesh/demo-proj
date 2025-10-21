@@ -128,4 +128,9 @@ jobs:
           --overwrite-existing
 
     - name: Deploy to AKS
+      run: |
+        kubectl set image deployment/bankapp \
+          bankapp=${{ vars.ACR_LOGIN_SERVER }}/bankapp:${{ github.sha }} --record
+
+    - name: Deploy to AKS
       run: kubectl apply -f ds.yml
