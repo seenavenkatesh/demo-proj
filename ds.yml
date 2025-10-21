@@ -1,19 +1,5 @@
 ---
-# ================================
-# MySQL Secret (password)
-# ================================
-apiVersion: v1
-kind: Secret
-metadata:
-  name: bankapp-db-secret
-type: Opaque
-data:
-  mysql-root-password: VGVzdEAxMjM=  # base64 encoded "Test@123"
-
----
-# ================================
 # MySQL Deployment
-# ================================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,49 +16,20 @@ spec:
         app: mysql
     spec:
       containers:
-      - name: mysql
-        image: mysql:8
+      - image: mysql:8
+        name: mysql
         env:
         - name: MYSQL_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: bankapp-db-secret
-              key: mysql-root-password
+          value: "Test@123"
         - name: MYSQL_DATABASE
-          value: bankappdb
+          value: "bankappdb"
         ports:
         - containerPort: 3306
           name: mysql
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        readinessProbe:
-          exec:
-            command:
-            - mysqladmin
-            - ping
-            - -h
-            - localhost
-          initialDelaySeconds: 10
-          periodSeconds: 5
-        livenessProbe:
-          exec:
-            command:
-            - mysqladmin
-            - ping
-            - -h
-            - localhost
-          initialDelaySeconds: 30
-          periodSeconds: 10
-
 ---
-# ================================
+
+
 # MySQL Service
-# ================================
 apiVersion: v1
 kind: Service
 metadata:
@@ -80,15 +37,10 @@ metadata:
 spec:
   ports:
   - port: 3306
-    targetPort: 3306
   selector:
     app: mysql
-  type: ClusterIP
-
 ---
-# ================================
-# BankApp Deployment
-# ================================
+# Java Application Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -103,17 +55,6 @@ spec:
       labels:
         app: bankapp
     spec:
-      initContainers:
-      - name: wait-for-mysql
-        image: busybox
-        command:
-        - sh
-        - -c
-        - |
-          until nc -z mysql-service 3306; do
-            echo "Waiting for MySQL..."
-            sleep 2
-          done
       containers:
       - name: bankapp
         image: bankapp12.azurecr.io/bankapp:latest
@@ -125,36 +66,9 @@ spec:
         - name: SPRING_DATASOURCE_USERNAME
           value: root
         - name: SPRING_DATASOURCE_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: bankapp-db-secret
-              key: mysql-root-password
-        - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
-          value: com.mysql.cj.jdbc.Driver
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        readinessProbe:
-          httpGet:
-            path: /actuator/health
-            port: 8080
-          initialDelaySeconds: 15
-          periodSeconds: 10
-        livenessProbe:
-          httpGet:
-            path: /actuator/health
-            port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 10
-
+          value: Test@123
 ---
-# ================================
-# BankApp Service
-# ================================
+# Bank Application Service
 apiVersion: v1
 kind: Service
 metadata:
@@ -165,4 +79,5 @@ spec:
   - port: 80
     targetPort: 8080
   selector:
-    app: bankapp
+    app: bankapp 
+    
