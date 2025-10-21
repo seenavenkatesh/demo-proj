@@ -40,7 +40,7 @@ jobs:
           echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/trivy.list
           sudo apt-get update -y && sudo apt-get install -y trivy
 
-      - name: Trivy File System Scan
+      - name: Trivy FS Scan
         run: trivy fs --format json -o fs-report.json .
 
       - name: Install Gitleaks
@@ -94,20 +94,21 @@ jobs:
           name: app-jar
           path: app
 
-      - name: Azure Login with OIDC
+      - name: Azure Login (OIDC)
         uses: azure/login@v1
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: ACR Login (OIDC)
-        uses: azure/docker-login@v2
-        with:
-          login-server: ${{ vars.ACR_LOGIN_SERVER }}
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: ACR Login via OIDC
+        run: az acr login --name ${{ vars.ACR_NAME }}
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
