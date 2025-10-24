@@ -65,11 +65,5 @@ jobs:
           --name ${{ vars.AKS_CLUSTER_NAME }} \
           --overwrite-existing
 
-
-    - name: Update Deployment Image
-      run: |
-        kubectl set image deployment/bankapp bankapp=$IMAGE
-
     - name: Apply Manifests (if first time deploy)
-      run: |
-        kubectl apply -f ds.yaml/ || true
+      run: kubectl apply -f ds.yaml/ || true
