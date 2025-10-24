@@ -53,12 +53,18 @@ jobs:
         file: ./Dockerfile
 
 
-    - name: Get AKS Credentials
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: latest
+
+    - name: Get AKS credentials
       run: |
         az aks get-credentials \
-          --resource-group ${{ secrets.RESOURCE_GROUP }} \
-          --name ${{ secrets.AKS_NAME }} \
+          --resource-group ${{ vars.AKS_RESOURCE_GROUP }} \
+          --name ${{ vars.AKS_CLUSTER_NAME }} \
           --overwrite-existing
+
 
     - name: Update Deployment Image
       run: |
