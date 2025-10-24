@@ -124,8 +124,8 @@ jobs:
 
     - name: Deploy to AKS
       run: |
-    IMAGE_TAG=${GITHUB_SHA::7} # short commit SHA
-    kubectl set image deployment/bankapp \
+      IMAGE_TAG=${GITHUB_SHA::7} # short commit SHA
+      kubectl set image deployment/bankapp \
       bankapp=${{ vars.ACR_LOGIN_SERVER }}/bankapp:$IMAGE_TAG \
       --record
-    kubectl rollout status deployment/bankapp
+      kubectl rollout status deployment/bankapp
