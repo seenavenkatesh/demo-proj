@@ -24,7 +24,6 @@ jobs:
 
     - name: Build application
       run: |
-        cd app
         mvn clean package -DskipTests
 
     - name: Azure Login (OIDC)
