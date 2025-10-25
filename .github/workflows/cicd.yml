@@ -47,8 +47,8 @@ jobs:
         context: .
         push: true
         tags: |
-          ${{ vars.ACR_LOGIN_SERVER }}/bankapp:latest
-          ${{ vars.ACR_LOGIN_SERVER }}/bankapp:${{ github.sha }}
+          ${{ vars.ACR_LOGIN_SERVER }}/bankapp123:latest
+          ${{ vars.ACR_LOGIN_SERVER }}/bankapp123:${{ github.sha }}
         file: ./Dockerfile
 
     - name: Set up kubectl
