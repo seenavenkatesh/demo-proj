@@ -22,9 +22,8 @@ jobs:
         java-version: "17"
         distribution: "temurin"
 
-    - name: Build application
-      run: |
-        mvn clean package -DskipTests
+    - name: Build application JAR
+      run: mvn clean package -DskipTests
 
     - name: Azure Login (OIDC)
       uses: azure/login@v2
@@ -35,7 +34,7 @@ jobs:
 
     - name: Login to ACR
       run: az acr login --name ${{ vars.ACR_NAME }}
-  
+
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
 
@@ -52,11 +51,8 @@ jobs:
           ${{ vars.ACR_LOGIN_SERVER }}/bankapp:${{ github.sha }}
         file: ./Dockerfile
 
-
     - name: Set up kubectl
       uses: azure/setup-kubectl@v3
-      with:
-        version: latest
 
     - name: Get AKS credentials
       run: |
@@ -65,5 +61,12 @@ jobs:
           --name ${{ vars.AKS_CLUSTER_NAME }} \
           --overwrite-existing
 
-    - name: Apply Manifests (if first time deploy)
-      run: kubectl apply -f ds.yaml/ || true
+    # ⭐ First time apply only (folder containing YAML files)
+    - name: Apply all manifests if first deployment
+      run: |
+        kubectl apply -f k8s/ || true
+
+    # ⭐ Update deployment with new image every push
+    - name: Update Deployment Image
+      run: |
+        kubectl set image deployment/bankapp bankapp=${{ vars.ACR_LOGIN_SERVER }}/bankapp:${{ github.sha }}
