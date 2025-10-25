@@ -57,7 +57,7 @@ spec:
     spec:
       containers:
       - name: bankapp
-        image: bankapp12.azurecr.io/bankapp:806f8a2566686e35a4bb885aa60af39901c8b6b6
+        image: bankapp123.azurecr.io/bankapp123:52c09885a7823f30627b8e074512fc8895dc2190
         ports:
         - containerPort: 8080
         env:
