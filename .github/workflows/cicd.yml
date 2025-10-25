@@ -136,4 +136,4 @@ jobs:
     # ⭐ Update deployment with new image every push
     - name: Update Deployment Image
       run: |
-        kubectl set image deployment/bankapp bankapp123=${{ vars.ACR_LOGIN_SERVER }}/bankapp123:${{ github.sha }}
+        kubectl set image deployment/bankapp bankapp=${{ vars.ACR_LOGIN_SERVER }}/bankapp123:${{ github.sha }}
