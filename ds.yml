@@ -67,7 +67,7 @@ spec:
           value: root
         - name: SPRING_DATASOURCE_PASSWORD
           value: Test@123
----
+--- 
 # Bank Application Service
 apiVersion: v1
 kind: Service
