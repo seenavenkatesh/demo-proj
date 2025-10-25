@@ -118,6 +118,8 @@ jobs:
 
     - name: Set up kubectl
       uses: azure/setup-kubectl@v3
+      with:
+        version: latest
 
     - name: Get AKS credentials
       run: |
@@ -129,7 +131,7 @@ jobs:
     # ⭐ First time apply only (folder containing YAML files)
     - name: Apply all manifests if first deployment
       run: |
-        kubectl apply -f ds.yaml
+        kubectl apply -f ds.yml
 
     # ⭐ Update deployment with new image every push
     - name: Update Deployment Image
